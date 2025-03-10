@@ -1,4 +1,5 @@
 - name: Collect Windows Host Information
+  host: windows
   gather_facts: no
   tasks:
     - name: Get Hostname
