@@ -1,12 +1,12 @@
-- name: Collect Windows Host Information
+---
+- name: Check Disk Usage on Windows
   hosts: windows
   gather_facts: no
   tasks:
-    - name: Get Hostname
-      win_command: hostname
-      register: hostname_result
+    - name: Get Disk Usage
+      win_shell: Get-PSDrive -Name C | Select-Object Used, Free
+      register: disk_usage
 
-    - name: Get IP Address
-      win_shell: |
-        Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.InterfaceAlias -notlike "*Loopback*"} | Select-Object -ExpandProperty IPAddress
-      register: ip
+    - name: Show Disk Usage
+      debug:
+        msg: "Used: {{ disk_usage.stdout_lines[2] }}, Free: {{ disk_usage.stdout_lines[3] }}"
