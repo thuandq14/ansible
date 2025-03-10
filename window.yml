@@ -1,0 +1,12 @@
+- name: Collect Windows Host Information
+  hosts: windows
+  gather_facts: no
+  tasks:
+    - name: Get Hostname
+      win_command: hostname
+      register: hostname_result
+
+    - name: Get IP Address
+      win_shell: |
+        Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.InterfaceAlias -notlike "*Loopback*"} | Select-Object -ExpandProperty IPAddress
+      register: ip
