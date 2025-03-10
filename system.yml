@@ -11,7 +11,7 @@
       register: hostname_output
 
     - name: Get disk usage
-      command: "df -h --output=source,size,used,avail,pcent,target / | tail -1"
+      shell: "df -h / | awk 'NR==2 {print \"Filesystem: \"$1\", Size: \"$2\", Used: \"$3\", Available: \"$4\", Usage: \"$5}'"
       register: disk_usage
 
     - name: Get memory usage
