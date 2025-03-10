@@ -2,29 +2,32 @@
   hosts: all
   gather_facts: yes
   tasks:
+    - name: Get OS version
+      command: cat /etc/os-release
+      register: os_version
+
     - name: Get hostname
       command: hostname
       register: hostname_output
 
     - name: Get disk usage
-      command: df -h /
+      command: df -h --output=source,size,used,avail,pcent,target /
       register: disk_usage
 
     - name: Get memory usage
-      command: free -m
+      command: free -m | awk 'NR==2{printf "Total: %s MB, Used: %s MB, Free: %s MB", $2, $3, $4}'
       register: memory_usage
 
     - name: Get IP address
-      command: ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}'
+      shell: "hostname -I | awk '{print $1}'"
       register: ip_address
-      ignore_errors: yes  # Tránh lỗi nếu interface không phải là eth0
+      ignore_errors: yes  # Tránh lỗi nếu không lấy được IP
 
     - name: Print system information
       debug:
         msg: |
+          OS Version: {{ os_version.stdout_lines | select('match', '^PRETTY_NAME=') | first | regex_replace('PRETTY_NAME="(.*)"', '\\1') }}
           Hostname: {{ hostname_output.stdout }}
-          Disk Usage: 
-          {{ disk_usage.stdout }}
-          Memory Usage:
-          {{ memory_usage.stdout }}
+          Disk Usage: {{ disk_usage.stdout_lines | last }}
+          Memory Usage: {{ memory_usage.stdout }}
           IP Address: {{ ip_address.stdout | default('Not Found') }}
