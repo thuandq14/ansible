@@ -1,0 +1,30 @@
+- name: Check system information
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Get hostname
+      command: hostname
+      register: hostname_output
+
+    - name: Get disk usage
+      command: df -h /
+      register: disk_usage
+
+    - name: Get memory usage
+      command: free -m
+      register: memory_usage
+
+    - name: Get IP address
+      command: ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}'
+      register: ip_address
+      ignore_errors: yes  # Tránh lỗi nếu interface không phải là eth0
+
+    - name: Print system information
+      debug:
+        msg: |
+          Hostname: {{ hostname_output.stdout }}
+          Disk Usage: 
+          {{ disk_usage.stdout }}
+          Memory Usage:
+          {{ memory_usage.stdout }}
+          IP Address: {{ ip_address.stdout | default('Not Found') }}
