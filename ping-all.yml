@@ -1,6 +1,6 @@
 ---
 - name: Ping all hosts
-  hosts: all_linux
+  hosts: all-linux
   gather_facts: no
   tasks:
     - name: Ping test
