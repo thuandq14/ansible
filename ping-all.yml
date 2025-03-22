@@ -1,0 +1,7 @@
+---
+- name: Ping all hosts
+  hosts: supergroup_all
+  gather_facts: no
+  tasks:
+    - name: Ping test
+      ansible.builtin.ping:
