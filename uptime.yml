@@ -1,11 +1,12 @@
 ---
 - name: Check uptime and group membership with Telegram notification
   hosts: all-linux
-  gather_facts: no  # Không cần thu thập facts đầy đủ, giúp chạy nhanh hơn
+  gather_facts: no  # Không cần gather_facts giúp chạy nhanh hơn
 
   vars:
     telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"  # Thay bằng token của bạn
     telegram_chat_id: "-4132281180"  # Thay bằng chat ID của bạn
+    exclude_groups: ['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win']
 
   tasks:
     - name: Lấy uptime trên Linux
@@ -13,24 +14,22 @@
       register: linux_uptime
       ignore_errors: yes
 
-    - name: Xác định Inventory gốc chính xác
+    - name: Lọc danh sách group hợp lệ
+      set_fact:
+        valid_groups: >-
+          {{ groups.keys() | difference(exclude_groups) | select('match', '^[a-zA-Z0-9_-]+$') | list }}
+
+    - name: Xác định Inventory gốc
       set_fact:
         root_inventory: >-
-          {{ groups.keys()
-          | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
-          | select('match', '^[a-zA-Z0-9_-]+$')  # Chỉ lấy tên hợp lệ
-          | select('selectattr', '1', 'contains', inventory_hostname, groups)
-          | list
-          | first | default('unknown') }}
+          {{ valid_groups | select('selectattr', '1', 'contains', inventory_hostname, groups) | list | first | default('unknown') }}
 
     - name: Hiển thị thông tin debug
       debug:
-        msg: >-
+        msg: |
           🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
           📂 Inventory gốc: {{ root_inventory }}
-
-          ⏳ Uptime:
-          {{ linux_uptime.stdout | default('Không lấy được') }}
+          ⏳ Uptime: {{ linux_uptime.stdout | default('Không lấy được') }}
 
     - name: Gửi thông báo Telegram
       uri:
@@ -39,14 +38,13 @@
         body_format: json
         body:
           chat_id: "{{ telegram_chat_id }}"
-          text: >-
-            🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
-            📂 Inventory gốc: {{ root_inventory }}
-
-            ⏳ Uptime:
-            {{ linux_uptime.stdout | default('Không lấy được') }}
+          text: |
+            🖥 *Host:* `{{ inventory_hostname }} ({{ ansible_host }})`
+            📂 *Inventory gốc:* `{{ root_inventory }}`
+            ⏳ *Uptime:* `{{ linux_uptime.stdout | default('Không lấy được') }}`
         headers:
           Content-Type: "application/json"
+        status_code: 200
       register: telegram_result
       failed_when: telegram_result.status != 200
       when: telegram_bot_token is defined and telegram_chat_id is defined
