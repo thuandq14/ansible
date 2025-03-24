@@ -1,38 +1,33 @@
 ---
-- name: Check uptime and determine root inventory
-  hosts: all
-  gather_facts: no  # Không cần facts để tránh lỗi ansible_os_family
+- name: Check uptime and group membership with Telegram notification
+  hosts: all-linux
+  gather_facts: no  # Không cần thu thập facts đầy đủ, giúp chạy nhanh hơn
 
   vars:
-    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
-    telegram_chat_id: "-4132281180"
+    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"  # Thay bằng token của bạn
+    telegram_chat_id: "-4132281180"  # Thay bằng chat ID của bạn
 
   tasks:
-    - name: Xác định inventory gốc chính xác
-      set_fact:
-        root_inventory: >-
-          {{
-            groups.keys()
-            | difference(['all', 'ungrouped', 'all-linux', 'all-win'])
-            | select('in', group_names)
-            | list
-            | first
-            | default('unknown')
-          }}
-
     - name: Lấy uptime trên Linux
       command: uptime
-      register: uptime_result
-      ignore_errors: yes  # Tránh lỗi khi không lấy được uptime
+      register: linux_uptime
+      ignore_errors: yes
 
-    - name: Hiển thị thông tin
+    - name: Xác định Inventory gốc
+      set_fact:
+        root_inventory: "{{ group_names | difference(['all', 'ungrouped']) | first | default('unknown') }}"
+      when: group_names is defined
+
+    - name: Hiển thị thông tin debug
       debug:
         msg: >-
           🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
-          🏷 Inventory gốc: {{ root_inventory }}
-          ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
+          📂 Inventory gốc: {{ root_inventory }}
+          
+          ⏳ Uptime:
+          {{ linux_uptime.stdout | default('Không lấy được') }}
 
-     - name: Gửi thông báo Telegram
+    - name: Gửi thông báo Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -44,6 +39,9 @@
             📂 Inventory gốc: {{ root_inventory }}
             
             ⏳ Uptime:
-            {{ uptime_result.stdout | default('Không lấy được') }}
+            {{ linux_uptime.stdout | default('Không lấy được') }}
         headers:
           Content-Type: "application/json"
+      register: telegram_result
+      failed_when: telegram_result.status != 200
+      when: telegram_bot_token is defined and telegram_chat_id is defined
