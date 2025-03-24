@@ -1,6 +1,6 @@
 ---
 - name: Check uptime and identify root inventory
-  hosts: host-linux
+  hosts: all-linux
   gather_facts: yes
   
   tasks:
