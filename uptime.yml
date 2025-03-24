@@ -1,5 +1,5 @@
 ---
-- name: Xác định Inventory gốc và kiểm tra uptime
+- name: Xác định Inventory gốc và gửi Telegram
   hosts: all-linux
   gather_facts: no
   tasks:
@@ -7,15 +7,6 @@
       set_fact:
         inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
 
-    - name: Run uptime command
-      command: uptime
-      register: uptime_result
-      ignore_errors: yes
-
-    - name: Display uptime output
-      debug:
-        msg: "{{ uptime_result.stdout }}"
-  
     - name: Gửi thông báo Telegram
       uri:
         url: "https://api.telegram.org/bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA/sendMessage"
@@ -24,10 +15,8 @@
         body:
           chat_id: "-4132281180"
           text: |
-            🚀 *Kết quả kiểm tra uptime* 🚀
+            🚨 *THÔNG BÁO INVENTORY* 🚨
             🖥 Host: `{{ inventory_hostname }}`
             🏷 Inventory gốc: `{{ inventory_goc }}`
-            ✅ Uptime: `{{ uptime_result.stdout | default('Lỗi khi chạy lệnh') }}`
         headers:
           Content-Type: "application/json"
-      when: uptime_result is defined
