@@ -4,7 +4,15 @@
   tasks:
     - name: Xác định Inventory gốc
       set_fact:
-        inventory_goc: "{{ hostvars[inventory_hostname]['owner'] | default('Unknown') }}"
+        inventory_goc: "{{ inventory_goc_result }}"
+      vars:
+        inventory_goc_result: >
+          {% for group in ['khangbui', 'vanthanh'] %}
+            {% if inventory_hostname in groups[group + ':children'] | select('in', groups[group + '_linux'] | default([])) %}
+              {{ group }}
+            {% endif %}
+          {% endfor %}
+          | default('Unknown')
 
     - name: Gửi thông báo Telegram
       uri:
