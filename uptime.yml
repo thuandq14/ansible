@@ -7,9 +7,11 @@
       set_fact:
         inventory_goc: >-
           {{
-            (groups | dict2items | selectattr('value', 'contains', inventory_hostname) | map(attribute='key') | list
-            | difference(['all', 'ungrouped', 'all-linux'])
-            | first)
+            groups.keys()
+            | select('match', '^(?!all|ungrouped|linux|win|all-linux|all-win).*')  # Bỏ qua nhóm không phải inventory cha
+            | select('search', inventory_hostname)  # Lọc nhóm chứa IP
+            | list
+            | first
             | default('Unknown')
           }}
 
