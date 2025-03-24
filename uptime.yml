@@ -1,22 +1,21 @@
----
-- name: Xác định Inventory gốc chính xác
+- name: Xác định Inventory gốc và gửi Telegram
   hosts: all-linux
   gather_facts: no
   tasks:
     - name: Xác định Inventory gốc
       set_fact:
-        inventory_goc: >-
-          {{
-            groups.keys()
-            | difference(["all", "ungrouped", "linux", "win", "all-linux", "all-win"])  # Chỉ lấy inventory gốc
-            | select('search', '^.+$')  # Chọn tất cả group hợp lệ
-            | select('selectattr', '0', 'in', groups)  # Chỉ lấy group có children
-            | select('selectattr', '0', 'in', groups[inventory_hostname] | default([]))  # Kiểm tra host có trong group nào
-            | list
-            | first
-            | default('Unknown')
-          }}
+        inventory_goc: "{{ group_names | difference(['all-linux']) | intersect(groups.keys()) | first | default('Unknown') }}"
 
-    - name: Debug kiểm tra nhóm thực sự
-      debug:
-        msg: "Host {{ inventory_hostname }} thuộc Inventory gốc: {{ inventory_goc }}"
+    - name: Gửi thông báo Telegram
+      uri:
+        url: "https://api.telegram.org/bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "-4132281180"
+          text: |
+            🚨 *THÔNG BÁO INVENTORY* 🚨
+            🖥 Host: {{ inventory_hostname }}
+            🏷 Inventory gốc: {{ inventory_goc }}
+        headers:
+          Content-Type: "application/json"
