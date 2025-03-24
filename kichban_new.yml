@@ -10,22 +10,19 @@
     - name: Run uptime command
       command: uptime
       register: uptime_result
+      ignore_unreachable: yes  # Không dừng khi unreachable
 
     - name: Display uptime output
       debug:
         msg: "{{ uptime_result.stdout }}"
+      when: uptime_result.stdout is defined
 
-    - name: Simulate Failure (for testing)
-      fail:
-        msg: "This is a simulated failure"
-      when: inventory_hostname == "112.213.89.102"
-      ignore_errors: yes  # Tiếp tục chạy dù lỗi
-
-    - name: Check if previous task failed
+    - name: Capture unreachable hosts
+      run_once: yes
       set_fact:
-        task_failed: "{{ ansible_failed_result is defined }}"
+        unreachable_hosts: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
 
-    - name: Send notification (only if failed)
+    - name: Send Telegram alert for unreachable hosts
       uri:
         url: "https://api.telegram.org/bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA/sendMessage"
         method: POST
@@ -34,10 +31,11 @@
           chat_id: "-4132281180"
           text: |
             🚨 *CẢNH BÁO LỖI ANSIBLE* 🚨
-            ❌ Lỗi trên host: `{{ inventory_hostname }}`
-            🏷 Inventory gốc: `{{ inventory_goc }}`
-            🖥 Hệ điều hành: `{{ 'Windows' if 'win' in group_names else 'Linux' }}`
+            ❌ Lỗi trên host: `{{ item }}`
+            🏷 Inventory gốc: `{{ hostvars[item].get('inventory_goc', 'Unknown') }}`
+            🖥 Hệ điều hành: `{{ 'Windows' if 'win' in hostvars[item].group_names else 'Linux' }}`
           parse_mode: "Markdown"
         headers:
           Content-Type: "application/json"
-      when: task_failed | default(false)
+      loop: "{{ unreachable_hosts }}"
+      when: unreachable_hosts | length > 0
