@@ -4,25 +4,44 @@
   gather_facts: no  # Không cần gather_facts giúp chạy nhanh hơn
 
   vars:
-    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"  # Thay bằng token của bạn
-    telegram_chat_id: "-4132281180"  # Thay bằng chat ID của bạn
+    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
+    telegram_chat_id: "-4132281180"
     exclude_groups: ['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win']
 
   tasks:
-    - name: Lấy uptime trên Linux
-      command: uptime
-      register: linux_uptime
+    - name: Kiểm tra kết nối SSH trước khi chạy
+      ping:
+      register: ping_result
       ignore_errors: yes
+
+    - name: Debug danh sách group
+      debug:
+        msg: "Danh sách groups: {{ groups.keys() | list }}"
 
     - name: Lọc danh sách group hợp lệ
       set_fact:
         valid_groups: >-
-          {{ groups.keys() | difference(exclude_groups) | select('match', '^[a-zA-Z0-9_-]+$') | list }}
+          {{ groups.keys() | difference(exclude_groups)
+          | select('match', '^[a-zA-Z0-9_-]+$') | list }}
+
+    - name: Debug nhóm hợp lệ
+      debug:
+        msg: "Nhóm hợp lệ: {{ valid_groups }}"
 
     - name: Xác định Inventory gốc
       set_fact:
         root_inventory: >-
-          {{ valid_groups | select('selectattr', '1', 'contains', inventory_hostname, groups) | list | first | default('unknown') }}
+          {{ valid_groups | select('contains', inventory_hostname) | list | first | default('unknown') }}
+
+    - name: Debug Inventory gốc
+      debug:
+        msg: "Inventory gốc: {{ root_inventory }}"
+
+    - name: Lấy uptime trên Linux
+      command: uptime
+      register: linux_uptime
+      ignore_errors: yes
+      when: ping_result.ping is defined and ping_result.ping == "pong"
 
     - name: Hiển thị thông tin debug
       debug:
