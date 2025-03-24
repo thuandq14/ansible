@@ -1,31 +1,27 @@
 ---
 - name: Check uptime and identify root inventory
   hosts: all-linux
-  gather_facts: yes
-  
+  gather_facts: no
+
   tasks:
     - name: Xác định nhóm inventory gốc
       set_fact:
-        root_group: "{{ group_names | intersect(['khangbui', 'vanthanh']) | first | default('unknown') }}"
-      when: group_names is defined
+        root_group: >-
+          {{
+            group_names
+            | map('regex_replace', '(-linux|-win)$', '')  # Loại bỏ hậu tố nhóm con
+            | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
+            | first | default('unknown')
+          }}
 
-    - name: Lấy uptime trên Linux
-      command: uptime -p
-      register: linux_uptime
-      when: ansible_os_family == "Linux"
-
-    - name: Lấy uptime trên Windows
-      win_shell: "(get-date) - (gcim Win32_OperatingSystem).LastBootUpTime"
-      register: win_uptime
-      when: ansible_os_family == "Windows"
+    - name: Lấy uptime bằng lệnh đơn giản
+      command: uptime
+      register: uptime_result
+      ignore_errors: yes  # Bỏ qua lỗi nếu không lấy được uptime
 
     - name: Debug thông tin uptime
       debug:
         msg: >-
           🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
           🏷 Inventory gốc: {{ root_group }}
-          ⏳ Uptime: {{
-            linux_uptime.stdout if ansible_os_family == "Linux" else
-            win_uptime.stdout if ansible_os_family == "Windows" else
-            'Không lấy được'
-          }}
+          ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
