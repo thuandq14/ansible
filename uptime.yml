@@ -7,11 +7,9 @@
       set_fact:
         inventory_goc: >-
           {{
-            groups.keys()
+            (groups | dict2items | selectattr('value', 'contains', inventory_hostname) | map(attribute='key') | list
             | difference(['all', 'ungrouped', 'all-linux'])
-            | select('in', group_names)
-            | list
-            | first
+            | first)
             | default('Unknown')
           }}
 
