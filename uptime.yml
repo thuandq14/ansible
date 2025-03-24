@@ -4,7 +4,7 @@
   gather_facts: yes
   
   vars:
-    telegram_bot_token: "bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
+    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
     telegram_chat_id: "-4132281180"
 
   tasks:
