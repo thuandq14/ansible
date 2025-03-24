@@ -1,6 +1,6 @@
 ---
 - name: Check uptime and group membership with Telegram notification
-  hosts: all-linux
+  hosts: all
   gather_facts: yes
   
   vars:
@@ -12,15 +12,17 @@
       win_command: powershell.exe "Get-Uptime | Format-List"
       register: win_uptime
       when: ansible_os_family == "Windows"
+      ignore_errors: yes  # Tiếp tục ngay cả khi lỗi
 
     - name: Get uptime for Linux hosts
       command: uptime
       register: linux_uptime
       when: ansible_os_family == "Linux"
+      ignore_errors: yes  # Tiếp tục ngay cả khi lỗi
 
     - name: Determine root group name
       set_fact:
-        root_group: "{{ group_names | intersect(['datnguyen']) | first | default('unknown') }}"
+        root_group: "{{ group_names | intersect(['datnguyen', 'khangbui', 'vanthanh']) | first | default('unknown') }}"
       when: group_names is defined
 
     - name: Store result in variable
@@ -39,7 +41,16 @@
         body_format: json
         body: 
           chat_id: "{{ telegram_chat_id }}"
-          text: "{{ host_info }}\nUptime: {{ linux_uptime.stdout if ansible_os_family == 'Linux' else win_uptime.stdout }}"
+          text: >-
+            {{ host_info }}
+            {%- if ansible_os_family == 'Linux' and linux_uptime.stdout is defined %}
+            Uptime: {{ linux_uptime.stdout }}
+            {%- elif ansible_os_family == 'Windows' and win_uptime.stdout is defined %}
+            Uptime: {{ win_uptime.stdout }}
+            {%- else %}
+            Uptime: Not available
+            {%- endif %}
         status_code: 200
       register: telegram_result
       failed_when: telegram_result.status != 200
+      when: telegram_bot_token is defined and telegram_chat_id is defined
