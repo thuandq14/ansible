@@ -1,5 +1,6 @@
 ---
 - name: Xác định Inventory gốc
+  hosts: all-linux
   set_fact:
     inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
 - name: Check uptime of remote server
