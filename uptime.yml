@@ -10,7 +10,7 @@
             groups.keys()
             | difference(["all", "ungrouped", "linux", "win", "all-linux", "all-win"])
             | select('match', '.*')
-            | select('search', inventory_hostname, groups)
+            | select('search', inventory_hostname, groups | map('flatten'))
             | list
             | first
             | default('Unknown')
