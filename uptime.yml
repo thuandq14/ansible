@@ -1,30 +1,18 @@
----
-- name: Kiểm tra uptime và gửi Telegram
-  hosts: all-linux
-  gather_facts: yes
+- name: Check Uptime và gửi Telegram
+  hosts: all
+  gather_facts: no
   tasks:
-    - name: Lấy thông tin uptime (Linux)
+    - name: Lấy uptime
       command: uptime -p
       register: uptime_result
-      when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"
 
-    - name: Lấy thông tin uptime (Windows)
-      win_shell: "Get-CimInstance Win32_OperatingSystem | Select-Object LastBootUpTime"
-      register: uptime_result
-      when: ansible_os_family == "Windows"
-
-    - name: Xác định Inventory gốc
-      set_fact:
-        inventory_root: "{{ groups.keys() 
-          | select('match', '^(?!all|ungrouped|linux|win|all-linux|all-win).*') 
-          | select('search', inventory_hostname) 
-          | list | first | default('Unknown') }}"
-    
-    - name: Gửi thông báo qua Telegram
+    - name: Gửi kết quả lên Telegram
       uri:
         url: "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage"
         method: POST
-        body_format: json
         body:
           chat_id: "-4132281180"
-          text: "🟢 Host {{ inventory_hostname }} (Inventory: {{ inventory_root }}) uptime: {{ uptime_result.stdout | default('_
+          text: "📢 Máy chủ {{ inventory_hostname }} đã chạy được: {{ uptime_result.stdout }}"
+        body_format: json
+        headers:
+          Content-Type: "application/json"
