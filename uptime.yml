@@ -1,11 +1,33 @@
-- name: Check Uptime trên các máy chủ
-  hosts: all-linux
+- name: Check Uptime và Xác định Inventory gốc
+  hosts: all
   gather_facts: no
   tasks:
+    - name: Xác định Inventory gốc của từng host
+      set_fact:
+        inventory_root: >-
+          {{
+            groups.keys()
+            | select("search", "^(?!all|ungrouped|linux|win|all-linux|all-win).*")
+            | select("extract", groups, inventory_hostname in groups.values())
+            | list | first | default("Unknown")
+          }}
+
     - name: Lấy uptime của máy chủ
-      command: uptime
+      command: uptime -p
       register: uptime_result
 
-    - name: Hiển thị kết quả uptime
+    - name: Hiển thị kết quả uptime và inventory gốc
       debug:
-        msg: "Uptime của {{ inventory_hostname }}: {{ uptime_result.stdout }}"
+        msg: "📌 Máy chủ {{ inventory_hostname }} (Inventory gốc: {{ inventory_root }}) đã chạy được: {{ uptime_result.stdout }}"
+
+    - name: Gửi kết quả lên Telegram
+      uri:
+        url: "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage"
+        method: POST
+        body:
+          chat_id: "-4132281180"
+          text: "📢 Máy chủ *{{ inventory_hostname }}* thuộc *{{ inventory_root }}* đã chạy được: *{{ uptime_result.stdout }}*"
+          parse_mode: "Markdown"
+        body_format: json
+        headers:
+          Content-Type: "application/json"
