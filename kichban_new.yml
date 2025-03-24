@@ -1,6 +1,6 @@
 ---
 - name: Check uptime of remote server
-  hosts: all
+  hosts: all-linux
   gather_facts: no
   tasks:
     - name: Get Inventory gốc
