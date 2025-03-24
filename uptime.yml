@@ -13,17 +13,22 @@
       register: linux_uptime
       ignore_errors: yes
 
-    - name: Xác định Inventory gốc
+    - name: Xác định Inventory gốc chính xác
       set_fact:
-        root_inventory: "{{ group_names | difference(['all', 'ungrouped']) | first | default('unknown') }}"
-      when: group_names is defined
+        root_inventory: >-
+          {{ groups.keys()
+          | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
+          | select('match', '^[a-zA-Z0-9_-]+$')  # Chỉ lấy tên hợp lệ
+          | select('selectattr', '1', 'contains', inventory_hostname, groups)
+          | list
+          | first | default('unknown') }}
 
     - name: Hiển thị thông tin debug
       debug:
         msg: >-
           🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
           📂 Inventory gốc: {{ root_inventory }}
-          
+
           ⏳ Uptime:
           {{ linux_uptime.stdout | default('Không lấy được') }}
 
@@ -37,7 +42,7 @@
           text: >-
             🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
             📂 Inventory gốc: {{ root_inventory }}
-            
+
             ⏳ Uptime:
             {{ linux_uptime.stdout | default('Không lấy được') }}
         headers:
