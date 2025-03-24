@@ -1,0 +1,38 @@
+---
+- name: Check uptime of remote server
+  hosts: all-linux
+  gather_facts: no
+  tasks:
+    - name: Get Inventory gốc
+      set_fact:
+        inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
+
+    - name: Run uptime command
+      command: uptime
+      register: uptime_result
+
+    - name: Display uptime output
+      debug:
+        msg: "{{ uptime_result.stdout }}"
+
+    - name: Simulate Failure (for testing)
+      fail:
+        msg: "This is a simulated failure"
+      when: inventory_hostname == "112.213.89.102"
+
+    - name: Send notification (only if failed)
+      uri:
+        url: "https://api.telegram.org/bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "-4132281180"
+          text: |
+            🚨 *CẢNH BÁO LỖI ANSIBLE* 🚨
+            ❌ Lỗi trên host: `{{ inventory_hostname }}`
+            🏷 Inventory gốc: `{{ inventory_goc }}`
+            🖥 Hệ điều hành: `{{ 'Windows' if 'win' in group_names else 'Linux' }}`
+          parse_mode: "Markdown"
+        headers:
+          Content-Type: "application/json"
+      when: inventory_hostname in ansible_failed_hosts
