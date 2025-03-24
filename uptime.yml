@@ -40,8 +40,8 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: >-
-            🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
-            🏷 Inventory gốc: {{ root_inventory }}
+            🖥 Host: {{ inventory_hostname }} \n
+            🏷 Inventory gốc: {{ root_inventory }} \n
             ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
         headers:
           Content-Type: "application/json"
