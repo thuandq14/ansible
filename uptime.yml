@@ -4,8 +4,8 @@
   gather_facts: yes
   
   vars:
-    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
-    telegram_chat_id: "-4132281180"
+    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"  # Thay bằng token của bạn
+    telegram_chat_id: "-4132281180"     # Thay bằng chat ID của bạn
 
   tasks:
     - name: Get uptime for Windows hosts
@@ -18,15 +18,18 @@
       register: linux_uptime
       when: ansible_os_family == "Linux"
 
+    - name: Determine root group name
+      set_fact:
+        root_group: "{{ group_names | intersect(['datnguyen']) | first | default('unknown') }}"
+      when: group_names is defined
+
     - name: Store result in variable
       set_fact:
-        host_info: "{{ ansible_host }} / {{ hostvars[inventory_hostname]['owner'] }}"
-      when: hostvars[inventory_hostname]['owner'] is defined
+        host_info: "{{ ansible_host }} / {{ root_group }}"
 
     - name: Display IP and group membership
       debug:
         msg: "{{ host_info }}"
-      when: host_info is defined
 
     - name: Send Telegram notification
       delegate_facts: true
@@ -38,6 +41,5 @@
           chat_id: "{{ telegram_chat_id }}"
           text: "{{ host_info }}\nUptime: {{ linux_uptime.stdout if ansible_os_family == 'Linux' else win_uptime.stdout }}"
         status_code: 200
-      when: host_info is defined
       register: telegram_result
       failed_when: telegram_result.status != 200
