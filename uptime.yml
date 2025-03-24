@@ -32,7 +32,7 @@
           🏷 Inventory gốc: {{ root_inventory }}
           ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
 
-        - name: Gửi thông báo Telegram
+     - name: Gửi thông báo Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
