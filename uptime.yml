@@ -3,9 +3,9 @@
   hosts: all-linux
   gather_facts: no
   tasks:
-    - name: Xác định Inventory gốc
+    - name: Xác định Inventory gốc chính xác
       set_fact:
-        inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
+        inventory_goc: "{{ (group_names | difference(['all', 'ungrouped']) | first) | default('Unknown') }}"
 
     - name: Gửi thông báo Telegram
       uri:
