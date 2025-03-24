@@ -8,11 +8,11 @@
         inventory_goc: >-
           {{
             groups.keys()
-            | reject("in", ["all", "ungrouped", "linux", "win", "all-linux", "all-win"])
-            | select("search", inventory_hostname)
+            | difference(["all", "ungrouped", "linux", "win", "all-linux", "all-win"])
+            | select('equalto', inventory_hostname, groups)
             | list
             | first
-            | default("Unknown")
+            | default('Unknown')
           }}
 
     - name: Debug kiểm tra nhóm thực sự
