@@ -8,9 +8,9 @@
         inventory_goc: >-
           {{
             groups.keys()
-            | reject("in", ["all", "ungrouped", "linux", "win", "all-linux", "all-win"])  # Bỏ qua nhóm không phải inventory cha
-            | select("extract", groups)  # Lấy danh sách hosts trong từng nhóm
-            | select("search", inventory_hostname)  # Tìm nhóm chứa IP
+            | reject("in", ["all", "ungrouped", "linux", "win", "all-linux", "all-win"])
+            | select("regex", "^(?!all|ungrouped|linux|win|all-linux|all-win).*")
+            | selectattr("0", "in", groups | map(attribute=inventory_hostname) | list)
             | list
             | first
             | default("Unknown")
