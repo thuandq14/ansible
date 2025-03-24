@@ -5,7 +5,15 @@
   tasks:
     - name: Xác định Inventory gốc chính xác
       set_fact:
-        inventory_goc: "{{ (group_names | difference(['all', 'ungrouped', 'all-linux']) | first) | default('Unknown') }}"
+        inventory_goc: >-
+          {{
+            groups.keys()
+            | difference(['all', 'ungrouped', 'all-linux'])
+            | select('in', group_names)
+            | list
+            | first
+            | default('Unknown')
+          }}
 
     - name: Debug kiểm tra nhóm thực sự
       debug:
