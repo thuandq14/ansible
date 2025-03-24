@@ -32,7 +32,7 @@
           🏷 Inventory gốc: {{ root_inventory }}
           ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
 
-    - name: Gửi thông báo Telegram
+        - name: Gửi thông báo Telegram
       uri:
         url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
@@ -40,9 +40,10 @@
         body:
           chat_id: "{{ telegram_chat_id }}"
           text: >-
-            🖥 Host: {{ inventory_hostname }} \n
-            🏷 Inventory gốc: {{ root_inventory }} \n
-            ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
+            🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
+            📂 Inventory gốc: {{ root_inventory }}
+            
+            ⏳ Uptime:
+            {{ uptime_result.stdout | default('Không lấy được') }}
         headers:
           Content-Type: "application/json"
-      when: telegram_bot_token is defined and telegram_chat_id is defined
