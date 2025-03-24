@@ -24,13 +24,16 @@
       debug:
         msg: "{{ uptime_result.stdout | default('Không lấy được') }}"
 
-    - name: Xác định Inventory gốc
+    - name: Xác định Inventory gốc chính xác
       set_fact:
         root_inventory: >-
-          {{ groups.keys() | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
-          | select('match', '^[a-zA-Z0-9_-]+$')
-          | selectattr(inventory_hostname, 'in', groups)
-          | list | first | default('unknown') }}
+          {{
+            groups.keys() 
+            | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
+            | select('search', '^[a-zA-Z0-9_-]+$') 
+            | select('in', groups | dict2items | selectattr('value', 'contains', inventory_hostname) | map(attribute='key') | list)
+            | list | first | default('unknown')
+          }}
 
     - name: Debug Inventory gốc
       debug:
@@ -39,7 +42,7 @@
     - name: Tạo nội dung thông báo Telegram
       set_fact:
         telegram_message: |
-          🖥 *Host:* `{{ inventory_hostname }} ({{ ansible_default_ipv4.address | default('N/A') }})`
+          🖥 *Host:* `{{ inventory_hostname }}`
           📂 *Inventory gốc:* `{{ root_inventory }}`
           ⏳ *Uptime:* `{{ uptime_result.stdout | default('🔴 Không lấy được') }}`
 
