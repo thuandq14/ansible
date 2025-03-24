@@ -19,6 +19,11 @@
       fail:
         msg: "This is a simulated failure"
       when: inventory_hostname == "112.213.89.102"
+      ignore_errors: yes  # Tiếp tục chạy dù lỗi
+
+    - name: Check if previous task failed
+      set_fact:
+        task_failed: "{{ ansible_failed_result is defined }}"
 
     - name: Send notification (only if failed)
       uri:
@@ -35,4 +40,4 @@
           parse_mode: "Markdown"
         headers:
           Content-Type: "application/json"
-      when: inventory_hostname in ansible_failed_hosts
+      when: task_failed | default(false)
