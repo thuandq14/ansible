@@ -1,6 +1,6 @@
 ---
 - name: Check uptime of remote server
-  hosts: all_linux
+  hosts: all-linux
   gather_facts: no
   tasks:
     - name: Run uptime command
