@@ -1,41 +1,43 @@
 ---
-- name: Xác định Inventory gốc và gửi Telegram
+- name: Check uptime and group membership with Telegram notification
   hosts: all-linux
-  gather_facts: no
+  gather_facts: yes
+  
+  vars:
+    telegram_bot_token: "bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
+    telegram_chat_id: "-4132281180"
+
   tasks:
-    - name: Xác định Inventory gốc chính xác
+    - name: Get uptime for Windows hosts
+      win_command: powershell.exe "Get-Uptime | Format-List"
+      register: win_uptime
+      when: ansible_os_family == "Windows"
+
+    - name: Get uptime for Linux hosts
+      command: uptime
+      register: linux_uptime
+      when: ansible_os_family == "Linux"
+
+    - name: Store result in variable
       set_fact:
-        inventory_goc: >-
-          {{
-            groups.keys()
-            | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
-            | select('in', group_names)
-            | list
-            | first
-            | default('Unknown')
-          }}
+        host_info: "{{ ansible_host }} / {{ hostvars[inventory_hostname]['owner'] }}"
+      when: hostvars[inventory_hostname]['owner'] is defined
 
-    - name: Lấy thông tin uptime
-      command: uptime -p
-      register: uptime_result
-      changed_when: false
-
-    - name: Debug kiểm tra nhóm thực sự
+    - name: Display IP and group membership
       debug:
-        msg: "Host {{ inventory_hostname }} thuộc Inventory gốc: {{ inventory_goc }}, Uptime: {{ uptime_result.stdout }}"
+        msg: "{{ host_info }}"
+      when: host_info is defined
 
-    - name: Gửi thông báo Telegram
+    - name: Send Telegram notification
+      delegate_facts: true
       uri:
-        url: "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage"
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
         method: POST
         body_format: json
-        body:
-          chat_id: "-4132281180"
-          text: |
-            🚨 *THÔNG BÁO INVENTORY* 🚨
-            🖥 Host: `{{ inventory_hostname }}`
-            🏷 Inventory gốc: `{{ inventory_goc }}`
-            ⏳ Uptime: `{{ uptime_result.stdout }}`
-        headers:
-          Content-Type: "application/json"
-      when: inventory_goc != "Unknown"
+        body: 
+          chat_id: "{{ telegram_chat_id }}"
+          text: "{{ host_info }}\nUptime: {{ linux_uptime.stdout if ansible_os_family == 'Linux' else win_uptime.stdout }}"
+        status_code: 200
+      when: host_info is defined
+      register: telegram_result
+      failed_when: telegram_result.status != 200
