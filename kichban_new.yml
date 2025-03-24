@@ -13,7 +13,12 @@
       ignore_errors: yes
       failed_when: uptime_result.rc != 0
 
-    - name: Send notification if failure occurs
+    - name: Ghi nhận host unreachable
+      set_fact:
+        unreachable_hosts: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
+      run_once: yes
+
+    - name: Gửi cảnh báo Telegram khi host bị lỗi
       uri:
         url: "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage"
         method: POST
@@ -29,5 +34,24 @@
           parse_mode: "Markdown"
         headers:
           Content-Type: "application/json"
-      when: uptime_result.rc != 0
+      when: uptime_result.rc != 0 or uptime_result.failed is defined
+      delegate_to: localhost
+
+    - name: Gửi cảnh báo host unreachable
+      uri:
+        url: "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "-4132281180"
+          text: |
+            🚨 *CẢNH BÁO HOST KHÔNG KẾT NỐI* 🚨
+            ❌ Host không kết nối: `{{ item }}`
+            🏷 Inventory gốc: `{{ hostvars[item].inventory_goc | default('Unknown') }}`
+            🖥 Hệ điều hành: `{{ 'Windows' if 'win' in hostvars[item].group_names else 'Linux' }}`
+          parse_mode: "Markdown"
+        headers:
+          Content-Type: "application/json"
+      loop: "{{ unreachable_hosts }}"
+      run_once: yes
       delegate_to: localhost
