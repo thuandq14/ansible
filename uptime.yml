@@ -5,7 +5,11 @@
   tasks:
     - name: Xác định Inventory gốc chính xác
       set_fact:
-        inventory_goc: "{{ (group_names | difference(['all', 'ungrouped']) | first) | default('Unknown') }}"
+        inventory_goc: "{{ (group_names | difference(['all', 'ungrouped', 'all-linux']) | first) | default('Unknown') }}"
+
+    - name: Debug kiểm tra nhóm thực sự
+      debug:
+        msg: "Host {{ inventory_hostname }} thuộc Inventory gốc: {{ inventory_goc }}"
 
     - name: Gửi thông báo Telegram
       uri:
