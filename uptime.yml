@@ -1,18 +1,41 @@
-- name: Check Uptime và gửi Telegram
-  hosts: all
+---
+- name: Xác định Inventory gốc và gửi Telegram
+  hosts: all-linux
   gather_facts: no
   tasks:
-    - name: Lấy uptime
+    - name: Xác định Inventory gốc chính xác
+      set_fact:
+        inventory_goc: >-
+          {{
+            groups.keys()
+            | difference(['all', 'ungrouped', 'all-linux'])
+            | select('in', group_names)
+            | list
+            | first
+            | default('Unknown')
+          }}
+
+    - name: Lấy thông tin uptime
       command: uptime -p
       register: uptime_result
+      changed_when: false
 
-    - name: Gửi kết quả lên Telegram
+    - name: Debug kiểm tra nhóm thực sự
+      debug:
+        msg: "Host {{ inventory_hostname }} thuộc Inventory gốc: {{ inventory_goc }}, Uptime: {{ uptime_result.stdout }}"
+
+    - name: Gửi thông báo Telegram
       uri:
         url: "https://api.telegram.org/bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA/sendMessage"
         method: POST
+        body_format: json
         body:
           chat_id: "-4132281180"
-          text: "📢 Máy chủ {{ inventory_hostname }} đã chạy được: {{ uptime_result.stdout }}"
-        body_format: json
+          text: |
+            🚨 *THÔNG BÁO INVENTORY* 🚨
+            🖥 Host: `{{ inventory_hostname }}`
+            🏷 Inventory gốc: `{{ inventory_goc }}`
+            ⏳ Uptime: `{{ uptime_result.stdout }}`
         headers:
           Content-Type: "application/json"
+      when: inventory_goc != "Unknown"
