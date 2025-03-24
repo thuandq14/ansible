@@ -1,7 +1,11 @@
 ---
 - name: Check uptime and determine root inventory
-  hosts: all-linux
-  gather_facts: no
+  hosts: all
+  gather_facts: no  # Không cần facts để tránh lỗi ansible_os_family
+
+  vars:
+    telegram_bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"
+    telegram_chat_id: "-4132281180"
 
   tasks:
     - name: Xác định inventory gốc chính xác
@@ -19,8 +23,7 @@
     - name: Lấy uptime trên Linux
       command: uptime
       register: uptime_result
-      when: "'Linux' in ansible_os_family"
-      ignore_errors: yes
+      ignore_errors: yes  # Tránh lỗi khi không lấy được uptime
 
     - name: Hiển thị thông tin
       debug:
@@ -28,3 +31,18 @@
           🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
           🏷 Inventory gốc: {{ root_inventory }}
           ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
+
+    - name: Gửi thông báo Telegram
+      uri:
+        url: "https://api.telegram.org/bot{{ telegram_bot_token }}/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ telegram_chat_id }}"
+          text: >-
+            🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
+            🏷 Inventory gốc: {{ root_inventory }}
+            ⏳ Uptime: {{ uptime_result.stdout | default('Không lấy được') }}
+        headers:
+          Content-Type: "application/json"
+      when: telegram_bot_token is defined and telegram_chat_id is defined
