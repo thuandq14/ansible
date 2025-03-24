@@ -3,7 +3,7 @@
   hosts: all-linux
   gather_facts: no
   vars:
-    bot_token: "<YOUR_BOT_TOKEN>"  # Thay bằng bot token của bạn
+    bot_token: "6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA"  # Thay bằng bot token của bạn
     chat_id: "-4132281180"         # Chat ID của bạn
     telegram_api_url: "https://api.telegram.org/bot{{ bot_token }}/sendMessage"
 
