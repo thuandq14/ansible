@@ -10,8 +10,9 @@
             groups.keys()
             | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
             | select('search', '.*')
-            | select('extract', groups)
-            | select('search', inventory_hostname)
+            | select('reject', 'match', '^(win|linux)$')  # Bỏ nhóm con
+            | select('selectattr', '1', 'contains', inventory_hostname, groups)
+            | map('first')
             | list
             | first
             | default('Unknown')
