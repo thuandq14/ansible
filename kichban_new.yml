@@ -2,28 +2,35 @@
 - name: Check uptime of remote server
   hosts: all-linux
   gather_facts: no
+  vars:
+    bot_token: "<YOUR_BOT_TOKEN>"  # Thay bằng bot token của bạn
+    chat_id: "-4132281180"         # Chat ID của bạn
+    telegram_api_url: "https://api.telegram.org/bot{{ bot_token }}/sendMessage"
+
   tasks:
     - name: Get Inventory gốc
       set_fact:
         inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
+      when: ansible_play_hosts is defined
 
     - name: Run uptime command
       command: uptime
       register: uptime_result
-      ignore_errors: yes
+      ignore_errors: yes  # Tiếp tục dù lệnh uptime thất bại
 
     - name: Ghi nhận host unreachable
       set_fact:
         unreachable_hosts: "{{ ansible_play_hosts_all | difference(ansible_play_hosts) }}"
       run_once: yes
+      delegate_to: localhost
 
     - name: Gửi cảnh báo Telegram khi host unreachable
       uri:
-        url: "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage"
+        url: "{{ telegram_api_url }}"
         method: POST
         body_format: json
         body:
-          chat_id: "-4132281180"
+          chat_id: "{{ chat_id }}"
           text: |
             🚨 *CẢNH BÁO HOST KHÔNG KẾT NỐI* 🚨
             ❌ Host không kết nối: `{{ item }}`
@@ -35,25 +42,48 @@
       loop: "{{ unreachable_hosts }}"
       run_once: yes
       delegate_to: localhost
+      ignore_errors: yes  # Tiếp tục dù gửi thông báo thất bại
 
-    - name: Gửi thông báo Telegram sau khi chạy
+    - name: Gửi thông báo Telegram sau khi chạy (thành công hoặc thất bại)
       uri:
-        url: "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/sendMessage"
+        url: "{{ telegram_api_url }}"
         method: POST
         body_format: json
         body:
-          chat_id: "-4132281180"
+          chat_id: "{{ chat_id }}"
           text: |
             📝 *KẾT QUẢ CHẠY ANSIBLE* 📝
             🔹 Host: `{{ inventory_hostname }}`
-            🏷 Inventory gốc: `{{ inventory_goc }}`
+            🏷 Inventory gốc: `{{ inventory_goc | default('Unknown') }}`
             🖥 Hệ điều hành: `{{ 'Windows' if 'win' in group_names else 'Linux' }}`
             {% if uptime_result.rc is defined and uptime_result.rc == 0 %}
             ✅ *Thành công*: `{{ uptime_result.stdout }}`
             {% else %}
-            ❌ *Lỗi*: `{{ uptime_result.stderr if uptime_result.stderr else 'Unknown error' }}`
+            ❌ *Lỗi*: `{{ uptime_result.stderr | default('Host không phản hồi hoặc lỗi không xác định') }}`
             {% endif %}
           parse_mode: "Markdown"
         headers:
           Content-Type: "application/json"
       delegate_to: localhost
+      ignore_errors: yes  # Tiếp tục dù gửi thông báo thất bại
+      when: inventory_hostname in ansible_play_hosts  # Chỉ gửi cho host đã kết nối được
+
+    - name: Gửi thông báo tóm tắt nếu không có host nào phản hồi
+      uri:
+        url: "{{ telegram_api_url }}"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "{{ chat_id }}"
+          text: |
+            🚨 *TÓM TẮT CHẠY ANSIBLE* 🚨
+            ❌ Không có host nào phản hồi!
+            📋 Tổng số host: `{{ ansible_play_hosts_all | length }}`
+            📋 Host không kết nối: `{{ unreachable_hosts | join(', ') }}`
+          parse_mode: "Markdown"
+        headers:
+          Content-Type: "application/json"
+      delegate_to: localhost
+      ignore_errors: yes
+      run_once: yes
+      when: ansible_play_hosts | length == 0  # Chỉ chạy nếu không có host nào phản hồi
