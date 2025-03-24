@@ -4,7 +4,7 @@
   tasks:
     - name: Xác định Inventory gốc
       set_fact:
-        inventory_goc: "{{ group_names | difference(['all-linux']) | intersect(groups.keys()) | first | default('Unknown') }}"
+        inventory_goc: "{{ hostvars[inventory_hostname]['owner'] | default('Unknown') }}"
 
     - name: Gửi thông báo Telegram
       uri:
