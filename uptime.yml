@@ -8,17 +8,32 @@
     telegram_chat_id: "-4132281180"     # Thay bằng chat ID của bạn
 
   tasks:
+    - name: Debug OS family
+      debug:
+        msg: "OS Family: {{ ansible_os_family }}, Host: {{ ansible_host }}"
+      when: ansible_os_family is defined
+
     - name: Get uptime for Windows hosts
       win_command: powershell.exe "Get-Uptime | Format-List"
       register: win_uptime
       when: ansible_os_family == "Windows"
-      ignore_errors: yes  # Tiếp tục ngay cả khi lỗi
+      ignore_errors: yes
+
+    - name: Debug Windows uptime result
+      debug:
+        var: win_uptime
+      when: ansible_os_family == "Windows"
 
     - name: Get uptime for Linux hosts
       command: uptime
       register: linux_uptime
       when: ansible_os_family == "Linux"
-      ignore_errors: yes  # Tiếp tục ngay cả khi lỗi
+      ignore_errors: yes
+
+    - name: Debug Linux uptime result
+      debug:
+        var: linux_uptime
+      when: ansible_os_family == "Linux"
 
     - name: Determine root group name
       set_fact:
