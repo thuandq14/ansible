@@ -10,7 +10,24 @@
     - name: Run uptime command
       command: uptime
       register: uptime_result
+      ignore_errors: yes
 
     - name: Display uptime output
       debug:
         msg: "{{ uptime_result.stdout }}"
+  
+    - name: Gửi thông báo Telegram
+      uri:
+        url: "https://api.telegram.org/bot6725419910:AAFPnpMWsIU_kuGFw_RkdjQeyvhzZQ1qxPA/sendMessage"
+        method: POST
+        body_format: json
+        body:
+          chat_id: "-4132281180"
+          text: |
+            🚀 *Kết quả kiểm tra uptime* 🚀
+            🖥 Host: `{{ inventory_hostname }}`
+            🏷 Inventory gốc: `{{ inventory_goc }}`
+            ✅ Uptime: `{{ uptime_result.stdout | default('Lỗi khi chạy lệnh') }}`
+        headers:
+          Content-Type: "application/json"
+      when: uptime_result is defined
