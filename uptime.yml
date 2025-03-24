@@ -1,5 +1,5 @@
 - name: Check Uptime và Xác định Inventory gốc
-  hosts: all
+  hosts: all-linux
   gather_facts: no
   tasks:
     - name: Xác định Inventory gốc của từng host
