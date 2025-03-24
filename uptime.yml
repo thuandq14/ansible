@@ -1,4 +1,7 @@
 ---
+- name: Xác định Inventory gốc
+  set_fact:
+    inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
 - name: Check uptime of remote server
   hosts: all-linux
   gather_facts: no
