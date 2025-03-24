@@ -9,10 +9,7 @@
           {{
             groups.keys()
             | difference(['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win'])
-            | select('search', '.*')
-            | select('reject', 'match', '^(win|linux)$')  # Bỏ nhóm con
-            | select('selectattr', '1', 'contains', inventory_hostname, groups)
-            | map('first')
+            | select('in', group_names)
             | list
             | first
             | default('Unknown')
