@@ -1,33 +1,30 @@
-- name: Check Uptime và Xác định Inventory gốc
+---
+- name: Kiểm tra uptime và gửi Telegram
   hosts: all-linux
-  gather_facts: no
+  gather_facts: yes
   tasks:
-    - name: Xác định Inventory gốc của từng host
-      set_fact:
-        inventory_root: >-
-          {{
-            groups.keys()
-            | select("search", "^(?!all|ungrouped|linux|win|all-linux|all-win).*")
-            | select("extract", groups, inventory_hostname in groups.values())
-            | list | first | default("Unknown")
-          }}
-
-    - name: Lấy uptime của máy chủ
+    - name: Lấy thông tin uptime (Linux)
       command: uptime -p
       register: uptime_result
+      when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"
 
-    - name: Hiển thị kết quả uptime và inventory gốc
-      debug:
-        msg: "📌 Máy chủ {{ inventory_hostname }} (Inventory gốc: {{ inventory_root }}) đã chạy được: {{ uptime_result.stdout }}"
+    - name: Lấy thông tin uptime (Windows)
+      win_shell: "Get-CimInstance Win32_OperatingSystem | Select-Object LastBootUpTime"
+      register: uptime_result
+      when: ansible_os_family == "Windows"
 
-    - name: Gửi kết quả lên Telegram
+    - name: Xác định Inventory gốc
+      set_fact:
+        inventory_root: "{{ groups.keys() 
+          | select('match', '^(?!all|ungrouped|linux|win|all-linux|all-win).*') 
+          | select('search', inventory_hostname) 
+          | list | first | default('Unknown') }}"
+    
+    - name: Gửi thông báo qua Telegram
       uri:
         url: "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage"
         method: POST
+        body_format: json
         body:
           chat_id: "-4132281180"
-          text: "📢 Máy chủ *{{ inventory_hostname }}* thuộc *{{ inventory_root }}* đã chạy được: *{{ uptime_result.stdout }}*"
-          parse_mode: "Markdown"
-        body_format: json
-        headers:
-          Content-Type: "application/json"
+          text: "🟢 Host {{ inventory_hostname }} (Inventory: {{ inventory_root }}) uptime: {{ uptime_result.stdout | default('_
