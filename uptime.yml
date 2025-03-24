@@ -9,29 +9,19 @@
     exclude_groups: ['all', 'ungrouped', 'linux', 'win', 'all-linux', 'all-win']
 
   tasks:
-    - name: Kiểm tra kết nối SSH trước khi chạy
-      ping:
-      register: ping_result
-      ignore_errors: yes
-
-    - name: Debug danh sách group
+    - name: Debug danh sách group có thể có host này
       debug:
-        msg: "Danh sách groups: {{ groups.keys() | list }}"
+        msg: "{{ item }}"
+      loop: "{{ groups.keys() | difference(exclude_groups) }}"
+      when: inventory_hostname in groups[item]
 
-    - name: Lọc danh sách group hợp lệ
-      set_fact:
-        valid_groups: >-
-          {{ groups.keys() | difference(exclude_groups)
-          | select('match', '^[a-zA-Z0-9_-]+$') | list }}
-
-    - name: Debug nhóm hợp lệ
-      debug:
-        msg: "Nhóm hợp lệ: {{ valid_groups }}"
-
-    - name: Xác định Inventory gốc
+    - name: Xác định Inventory gốc chính xác
       set_fact:
         root_inventory: >-
-          {{ valid_groups | select('contains', inventory_hostname) | list | first | default('unknown') }}
+          {{ groups.keys() | difference(exclude_groups)
+          | select('match', '^[a-zA-Z0-9_-]+$')
+          | select('extract', groups, inventory_hostname in groups[item])
+          | list | first | default('unknown') }}
 
     - name: Debug Inventory gốc
       debug:
@@ -41,14 +31,6 @@
       command: uptime
       register: linux_uptime
       ignore_errors: yes
-      when: ping_result.ping is defined and ping_result.ping == "pong"
-
-    - name: Hiển thị thông tin debug
-      debug:
-        msg: |
-          🖥 Host: {{ inventory_hostname }} ({{ ansible_host }})
-          📂 Inventory gốc: {{ root_inventory }}
-          ⏳ Uptime: {{ linux_uptime.stdout | default('Không lấy được') }}
 
     - name: Gửi thông báo Telegram
       uri:
