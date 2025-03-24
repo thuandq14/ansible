@@ -1,22 +1,25 @@
 ---
-- name: Check uptime and identify root inventory
+- name: Check uptime and determine root inventory
   hosts: all-linux
   gather_facts: no
 
   tasks:
-    - name: Xác định inventory gốc
+    - name: Xác định inventory gốc chính xác
       set_fact:
         root_inventory: >-
           {{
-            group_names
-            | select('search', '^[a-zA-Z0-9]+$')  # Chỉ lấy nhóm không chứa ký tự đặc biệt
-            | difference(['all', 'ungrouped'])
-            | first | default('unknown')
+            groups.keys()
+            | difference(['all', 'ungrouped', 'all-linux', 'all-win'])
+            | select('in', group_names)
+            | list
+            | first
+            | default('unknown')
           }}
 
     - name: Lấy uptime trên Linux
       command: uptime
       register: uptime_result
+      when: "'Linux' in ansible_os_family"
       ignore_errors: yes
 
     - name: Hiển thị thông tin
