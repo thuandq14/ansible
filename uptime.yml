@@ -8,7 +8,7 @@
       vars:
         inventory_goc_result: >
           {% for group in ['khangbui', 'vanthanh'] %}
-            {% if inventory_hostname in groups[group + ':children'] | select('in', groups[group + '_linux'] | default([])) %}
+            {% if inventory_hostname in groups['linux'] and inventory_hostname in groups[group] %}
               {{ group }}
             {% endif %}
           {% endfor %}
