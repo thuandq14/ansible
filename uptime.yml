@@ -1,12 +1,12 @@
 ---
-- name: Xác định Inventory gốc
-  hosts: all-linux
-  set_fact:
-    inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
-- name: Check uptime of remote server
+- name: Xác định Inventory gốc và kiểm tra uptime
   hosts: all-linux
   gather_facts: no
   tasks:
+    - name: Xác định Inventory gốc
+      set_fact:
+        inventory_goc: "{{ group_names | intersect(groups.keys()) | first | default('Unknown') }}"
+
     - name: Run uptime command
       command: uptime
       register: uptime_result
