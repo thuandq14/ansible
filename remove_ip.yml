@@ -2,7 +2,11 @@
   hosts: "{{ ip_server }}"
   gather_facts: no
   tasks:
-    - name: REMOVE IP command on remote server
+    - name: Run CSF command on remote server
       command: csf -g {{ target_ip }}
       register: csf_output
       changed_when: false
+
+    - name: Display result
+      debug:
+        msg: "The IP {{ target_ip }} is {{ csf_output.stdout }}."
