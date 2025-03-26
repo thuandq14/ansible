@@ -3,14 +3,6 @@
   gather_facts: no
   tasks:
     - name: REMOVE IP command on remote server
-      command: csf -dr {{ target_ip }}
+      command: csf -g {{ target_ip }}
       register: csf_output
       changed_when: false
-
-    - name: Parse CSF output
-      set_fact:
-        ip_found: "{{ 'No matches found for' not in csf_output.stdout }}"
-
-    - name: Display result
-      debug:
-        msg: "The IP {{ target_ip }} is {{ 'found' if ip_found else 'not found' }}."
