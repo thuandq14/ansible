@@ -1,0 +1,16 @@
+- name: Check if IP is in CSF firewall
+  hosts: "{{ ip_server }}"
+  gather_facts: no
+  tasks:
+    - name: Run CSF command on remote server
+      command: csf -g {{ target_ip }}
+      register: csf_output
+      changed_when: false
+
+    - name: Parse CSF output
+      set_fact:
+        ip_found: "{{ 'No matches found for' not in csf_output.stdout }}"
+
+    - name: Display result
+      debug:
+        msg: "The IP {{ target_ip }} is {{ 'found' if ip_found else 'not found' }}."
