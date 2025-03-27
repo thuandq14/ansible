@@ -9,4 +9,4 @@
 
     - name: Display result
       debug:
-        msg: "The IP {{ target_ip }} is {{ csf_output.stdout }}."
+        msg: "{{ {'IP': target_ip, 'Result': csf_output.stdout} | to_nice_json }}"
