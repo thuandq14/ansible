@@ -1,16 +1,14 @@
 - name: Remove IP from MDaemon blacklist and check logs
   hosts: remote
   gather_facts: no
+  vars:
+    ip_to_remove: "{{ ip_to_remove | default('') }}"
+
   tasks:
-
-    - name: Prompt for IP to remove
-      pause:
-        prompt: "Nhập IP cần xóa khỏi danh sách blacklist"
-      register: ip_input
-
-    - name: Set IP variable
-      set_fact:
-        ip_to_remove: "{{ ip_input.user_input }}"
+    - name: Kiểm tra biến IP có được truyền vào không
+      fail:
+        msg: "❌ Không có IP nào được cung cấp. Hãy gửi biến ip_to_remove qua API."
+      when: ip_to_remove | length == 0
 
     - name: Validate IP format
       fail:
@@ -78,65 +76,3 @@
       debug:
         msg: "{{ log_search.stdout_lines }}"
       when: log_search.stdout is defined
-
-    - name: Get last two parts of local IP for folder path
-      win_shell: |
-        $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -like "112.213.*" }).IPAddress
-        $ipParts = $ip.Split(".")
-        $lastPart = $ipParts[-2] + $ipParts[-1]
-        if ($ipParts[-1].Length -eq 1) {
-            $lastPart = $ipParts[-2] + $ipParts[-1].PadLeft(2, '0')
-        }
-        Write-Output $lastPart
-      register: last_part_result
-
-    - name: Set mail folder path
-      set_fact:
-        mail_folder: "C:\\MDaemon\\Users\\mail{{ last_part_result.stdout | trim }}.dotvndns.vn\\root"
-
-    - name: Check if mail folder exists
-      win_stat:
-        path: "{{ mail_folder }}"
-      register: mail_folder_stat
-      when: log_search.stdout is search('Không tìm thấy log liên quan đến IP')
-
-    - name: Search .msg files for blocked IP details
-      win_shell: |
-        $mailFolder = "{{ mail_folder }}"
-        $ipToRemove = "{{ ip_to_remove }}"
-        $found = $false
-        if (Test-Path $mailFolder) {
-            $msgFiles = Get-ChildItem -Path $mailFolder -Filter "*.msg"
-            foreach ($msgFile in $msgFiles) {
-                $msgPath = $msgFile.FullName
-                $content = Get-Content $msgPath -Raw
-                if ($content -match "Dynamic Screen: Blocked IP Address[:\\s]+$ipToRemove") {
-                    $found = $true
-                    Write-Output "🛑 Lý do chặn từ file: $($msgFile.Name)"
-                    $lines = $content -split "`r?`n"
-                    foreach ($line in $lines) {
-                        if ($line -match [regex]::Escape($ipToRemove)) {
-                            Write-Output "📌 $line"
-                        }
-                    }
-                    Write-Output "-------------------------------------------"
-                }
-            }
-            if (-not $found) {
-                Write-Output "✅ Không tìm thấy IP $ipToRemove bị chặn trong các file .msg."
-            }
-        } else {
-            Write-Output "❌ Không tìm thấy thư mục người dùng cho IP này."
-        }
-      register: msg_search
-      when:
-        - mail_folder_stat is defined
-        - mail_folder_stat.stat is defined
-        - mail_folder_stat.stat.exists
-        - log_search.stdout is search('Không tìm thấy log liên quan đến IP')
-
-    - name: Show .msg file search result
-      debug:
-        msg: "{{ msg_search.stdout_lines }}"
-      when: msg_search.stdout is defined
-
