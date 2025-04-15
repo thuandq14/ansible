@@ -1,12 +1,13 @@
 ---
-- name: Check uptime of remote server
+- name: Kiểm tra hostname của Linux
   hosts: all
-  gather_facts: no
-  tasks:
-    - name: Run uptime command
-      command: uptime
-      register: uptime_result
+  gather_facts: false
 
-    - name: Display uptime output
-      debug:
-        msg: "{{ uptime_result.stdout }}"
+  tasks:
+    - name: Lấy hostname của hệ thống
+      ansible.builtin.command: hostname
+      register: hostname_output
+
+    - name: Hiển thị hostname
+      ansible.builtin.debug:
+        msg: "Hostname của máy là: {{ hostname_output.stdout }}"
