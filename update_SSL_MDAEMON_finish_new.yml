@@ -1,0 +1,110 @@
+- name: Cập nhật SSL cho MDaemon
+  hosts: remote
+  gather_facts: no
+
+  vars:
+    pfx_url: "https://your-domain.com/path/to/certificate.pfx"
+    pfx_password: "yourPFXpassword"
+    domain: "yourdomain.com"
+
+  tasks:
+    - name: Tạo folder backup_INI_SSL nếu chưa có
+      ansible.windows.win_file:
+        path: D:\backup_INI_SSL
+        state: directory
+
+    - name: Sao lưu file .ini trước khi chỉnh sửa
+      ansible.windows.win_shell: |
+        $date = Get-Date -Format "yyyyMMdd-HHmmss"
+        $filename = Split-Path -Leaf "{{ item }}"
+        Copy-Item -Path "{{ item }}" -Destination "D:\backup_INI_SSL\$filename-$date.bak"
+      loop:
+        - "C:\\MDaemon\\App\\MDaemon.ini"
+        - "C:\\MDaemon\\WebAdmin\\WebAdmin.ini"
+        - "C:\\MDaemon\\WorldClient\\WorldClient.ini"
+
+    - name: Tạo thư mục CertPFXSSL nếu chưa có
+      ansible.windows.win_file:
+        path: D:\CertPFXSSL
+        state: directory
+
+    - name: Lấy thumbprint của chứng chỉ hiện tại và định dạng lại
+      ansible.windows.win_shell: |
+        $cert = Get-ChildItem -Path Cert:\\LocalMachine\\My | Where-Object { $_.Subject -like "*{{ domain }}*" } | Sort-Object NotAfter -Descending | Select-Object -First 1
+        if ($cert) {
+          $thumbprint = ($cert.Thumbprint -replace " ", "") -creplace '(.{4})', '$1 '
+          $thumbprint = $thumbprint.Trim()
+          Write-Output $thumbprint
+        } else {
+          Write-Output "ERROR: Không tìm thấy chứng chỉ SSL hiện tại cho domain {{ domain }}"
+          exit 1
+        }
+      register: old_thumbprint
+      failed_when: "'ERROR:' in old_thumbprint.stdout"
+
+    - name: Tải file SSL PFX từ server
+      ansible.windows.win_shell: |
+        Invoke-WebRequest -Uri "{{ pfx_url }}" -OutFile "D:\CertPFXSSL\certificate.pfx" -UseBasicParsing
+
+    - name: Import SSL vào Certificate Store
+      ansible.windows.win_shell: |
+        certutil -f -p "{{ pfx_password }}" -importPFX My "D:\CertPFXSSL\certificate.pfx"
+
+    - name: Lấy thumbprint của chứng chỉ mới và định dạng lại
+      ansible.windows.win_shell: |
+        $cert = Get-ChildItem -Path Cert:\\LocalMachine\\My | Where-Object { $_.Subject -like "*{{ domain }}*" } | Sort-Object NotAfter -Descending | Select-Object -First 1
+        if ($cert) {
+          $thumbprint = ($cert.Thumbprint -replace " ", "") -creplace '(.{4})', '$1 '
+          $thumbprint = $thumbprint.Trim()
+          Write-Output $thumbprint
+        } else {
+          Write-Output "ERROR: Không tìm thấy chứng chỉ SSL mới cho domain {{ domain }}"
+          exit 1
+        }
+      register: new_thumbprint
+      failed_when: "'ERROR:' in new_thumbprint.stdout"
+
+    - name: Cập nhật CertificateHash trong file .ini mà không xóa dòng
+      ansible.windows.win_shell: |
+        $filePath = "{{ item }}"
+        if (-Not (Test-Path $filePath)) {
+          Write-Output "ERROR: Không tìm thấy file $filePath"
+          exit 1
+        }
+        
+        $fileContent = Get-Content -Path $filePath -Encoding Default
+        Write-Output "Nội dung file trước khi thay đổi:" 
+        $fileContent | ForEach-Object { Write-Output $_ }
+        
+        $oldThumb = "{{ old_thumbprint.stdout | trim }}"
+        $newThumb = "{{ new_thumbprint.stdout | trim }}"
+        
+        if ($oldThumb -and $newThumb) {
+          Write-Output "Đã tìm thấy CertificateHash cũ: $oldThumb"
+          $updatedContent = $fileContent -replace "(CertificateHash[0-9]*=\s*)$oldThumb", "`$1$newThumb"
+          $updatedContent | Set-Content -Path $filePath -Encoding Default
+          Write-Output "Đã cập nhật CertificateHash mới: $newThumb trong $filePath"
+        } else {
+          Write-Output "ERROR: Không tìm thấy hoặc cập nhật được CertificateHash trong $filePath"
+          exit 1
+        }
+      loop:
+        - "C:\\MDaemon\\App\\MDaemon.ini"
+        - "C:\\MDaemon\\WebAdmin\\WebAdmin.ini"
+        - "C:\\MDaemon\\WorldClient\\WorldClient.ini"
+      failed_when: "'ERROR:' in new_thumbprint.stdout"
+
+    - name: Restart MDaemon
+      ansible.windows.win_command: |
+        powershell -Command "Start-Process -FilePath 'C:\\Users\\Administrator\\Desktop\\restart_mail.bat' -WindowStyle Hidden -Wait"
+
+    - name: Xóa chứng chỉ SSL cũ khỏi Cert:\LocalMachine\My sau khi cập nhật thành công
+      ansible.windows.win_shell: |
+        $thumbprint = "{{ old_thumbprint.stdout | trim }}" -replace " ", ""
+        $cert = Get-ChildItem -Path Cert:\\LocalMachine\\My | Where-Object { $_.Thumbprint -eq $thumbprint }
+        if ($cert) {
+          $cert | Remove-Item -Force
+          Write-Output "Đã xóa chứng chỉ cũ: $thumbprint"
+        } else {
+          Write-Output "Không tìm thấy chứng chỉ cần xóa: $thumbprint"
+        }
