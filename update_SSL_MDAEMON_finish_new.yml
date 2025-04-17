@@ -3,9 +3,9 @@
   gather_facts: no
 
   vars:
-    pfx_url: "https://your-domain.com/path/to/certificate.pfx"
-    pfx_password: "yourPFXpassword"
-    domain: "yourdomain.com"
+    pfx_url: "http://download.pavietnam.vn/uploader/download.php?path=data%2Fpfx%2F&file=chain-mail-doantotnghiep-giangvinh-id-vn07.pfx"
+    pfx_password: "12345678"
+    domain: "mail.doantotnghiep-giangvinh.id.vn"
 
   tasks:
     - name: Tạo folder backup_INI_SSL nếu chưa có
