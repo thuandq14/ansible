@@ -5,7 +5,7 @@
   vars:
     pfx_url: "http://download.pavietnam.vn/uploader/download.php?path=data%2Fpfx%2F&file=chain-mail-doantotnghiep-giangvinh-id-vn07.pfx"
     pfx_password: "@Tyz2cvwH3p!"
-    domain: "mail.doantotnghiep-giangvinh.id.vn"
+    domain: "*.maychuemail.com"
 
   tasks:
     - name: Tạo folder backup_INI_SSL nếu chưa có
