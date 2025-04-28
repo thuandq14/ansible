@@ -1,10 +1,10 @@
 - name: Cập nhật SSL cho MDaemon
-  hosts: remote
+  hosts: win
   gather_facts: no
 
   vars:
     pfx_url: "http://download.pavietnam.vn/uploader/download.php?path=data%2Fpfx%2F&file=chain-mail-doantotnghiep-giangvinh-id-vn07.pfx"
-    pfx_password: "12345678"
+    pfx_password: "@Tyz2cvwH3p!"
     domain: "mail.doantotnghiep-giangvinh.id.vn"
 
   tasks:
@@ -71,14 +71,14 @@
           Write-Output "ERROR: Không tìm thấy file $filePath"
           exit 1
         }
-        
+
         $fileContent = Get-Content -Path $filePath -Encoding Default
         Write-Output "Nội dung file trước khi thay đổi:" 
         $fileContent | ForEach-Object { Write-Output $_ }
-        
+
         $oldThumb = "{{ old_thumbprint.stdout | trim }}"
         $newThumb = "{{ new_thumbprint.stdout | trim }}"
-        
+
         if ($oldThumb -and $newThumb) {
           Write-Output "Đã tìm thấy CertificateHash cũ: $oldThumb"
           $updatedContent = $fileContent -replace "(CertificateHash[0-9]*=\s*)$oldThumb", "`$1$newThumb"
@@ -94,9 +94,23 @@
         - "C:\\MDaemon\\WorldClient\\WorldClient.ini"
       failed_when: "'ERROR:' in new_thumbprint.stdout"
 
-    - name: Restart MDaemon
-      ansible.windows.win_command: |
-        powershell -Command "Start-Process -FilePath 'C:\\Users\\Administrator\\Desktop\\restart_mail.bat' -WindowStyle Hidden -Wait"
+    - name: Kill MDaemon related processes
+      ansible.windows.win_shell: |
+        taskkill /F /IM MDSpamD.exe
+        taskkill /F /IM WorldClient.exe
+        taskkill /F /IM WebAdmin.exe
+        taskkill /F /IM CFEngine.exe
+        taskkill /F /IM MDaemon.exe
+
+    - name: Stop MDaemon service
+      ansible.windows.win_service:
+        name: mdaemon
+        state: stopped
+
+    - name: Start MDaemon service
+      ansible.windows.win_service:
+        name: mdaemon
+        state: started
 
     - name: Xóa chứng chỉ SSL cũ khỏi Cert:\LocalMachine\My sau khi cập nhật thành công
       ansible.windows.win_shell: |
