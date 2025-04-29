@@ -3,7 +3,7 @@
   gather_facts: no
 
   vars:
-    pfx_url: "http://download.pavietnam.vn/uploader/download.php?path=data%2Fpfx%2F&file=chain-mail-doantotnghiep-giangvinh-id-vn07.pfx"
+    pfx_url: "http://download.pavietnam.vn/uploader/download.php?path=data%2Fpfx%2F&file=chain-star-maychuemail-com.pfx"
     pfx_password: "@Tyz2cvwH3p!"
     domain: "*.maychuemail.com"
 
