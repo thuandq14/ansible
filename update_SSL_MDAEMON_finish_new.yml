@@ -1,5 +1,5 @@
 - name: Cập nhật SSL cho MDaemon
-  hosts: win
+  hosts: "{{ target_host }}"
   gather_facts: no
 
   vars:
